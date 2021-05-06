@@ -4,6 +4,7 @@ from random import randrange
 import random
 import copy
 import os
+from heapq import heapify, heappush, heappop
 
 BoardPath = "Assets/BoardImages/"
 ElementPath = "Assets/ElementImages/"
@@ -15,7 +16,7 @@ pygame.mixer.init()
 pygame.init()
 print(pygame.mixer.music.get_busy())
 
-# 28 Across 31 Tall 1: Empty Space 2: Tic-Tak 3: Wall 4: Ghost safe-space 5: Special Tic-Tak
+# 28 Across 31 Tall 1: Empty Space 2: Tic-Tak 3: Wall 4: Ghost safe-space 5: Special Tic-Tak 6: Power Pellete
 originalGameBoard = [
     [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
     [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
@@ -83,7 +84,7 @@ class Game:
         self.ghosts = [Ghost(14.0, 13.5, "red", 0), Ghost(17.0, 11.5, "blue", 1), Ghost(17.0, 13.5, "pink", 2), Ghost(17.0, 15.5, "orange", 3)]
         self.pacman = Pacman(26.0, 13.5) # Center of Second Last Row
         self.total = self.getCount()
-        self.ghostScore = 200
+        self.ghostScore = 200 # points on eating a ghost
         self.levels = [[350, 250], [150, 450], [150, 450], [0, 600]]
         random.shuffle(self.levels)
         # Level index and Level Progress
@@ -105,7 +106,7 @@ class Game:
         self.berries = ["tile080.png", "tile081.png", "tile082.png", "tile083.png", "tile084.png", "tile085.png", "tile086.png", "tile087.png"]
         self.berriesCollected = []
         self.levelTimer = 0
-        self.berryScore = 100
+        self.berryScore = 100 # berry eating score addition
         self.lockedInTimer = 100
         self.lockedIn = True
         self.extraLifeGiven = False
@@ -124,7 +125,7 @@ class Game:
             self.drawTilesAround(21, 12)
             self.drawTilesAround(21, 13)
             self.drawTilesAround(21, 14)
-            self.drawReady()
+            self.drawReady() # prints the text READY on the screen
             pygame.display.update()
             return
 
@@ -134,10 +135,11 @@ class Game:
         self.tictakChangeCount += 1
         self.ghostsAttacked = False
 
-        if self.score >= 10000 and not self.extraLifeGiven:
-            self.lives += 1
-            self.extraLifeGiven = True
-            self.forcePlayMusic("pacman_extrapac.wav")
+        # this code give extra life, this is not needed
+        # if self.score >= 10000 and not self.extraLifeGiven:
+        #     self.lives += 1
+        #     self.extraLifeGiven = True
+        #     self.forcePlayMusic("pacman_extrapac.wav")
 
         # Draw tiles around ghosts and pacman
         self.clearBoard()
@@ -145,7 +147,7 @@ class Game:
             if ghost.attacked:
                 self.ghostsAttacked = True
 
-        # Check if the ghost should case pacman
+        # Check if the ghost should chase pacman
         index = 0
         for state in self.ghostStates:
             state[1] += 1
@@ -161,7 +163,7 @@ class Game:
                 ghost.target = [self.pacman.row, self.pacman.col]
             index += 1
 
-        if self.levelTimer == self.lockedInTimer:
+        if self.levelTimer == self.lockedInTimer: # at the starting of the game, 3 ghosts are already lcoked in
             self.lockedIn = False
 
         self.checkSurroundings
@@ -229,7 +231,7 @@ class Game:
                     if len(imageName) == 1:
                         imageName = "00" + imageName
                     elif len(imageName) == 2:
-                         imageName = "0" + imageName
+                        imageName = "0" + imageName
                     # Get image of desired tile
                     imageName = "tile" + imageName + ".png"
                     tileImage = pygame.image.load(BoardPath + imageName)
@@ -305,17 +307,17 @@ class Game:
         musicPlaying = 1
 
     def clearBoard(self):
-            # Draw tiles around ghosts and pacman
-            for ghost in self.ghosts:
-                self.drawTilesAround(ghost.row, ghost.col)
-            self.drawTilesAround(self.pacman.row, self.pacman.col)
-            self.drawTilesAround(self.berryLocation[0], self.berryLocation[1])
-            # Clears Ready! Label
-            self.drawTilesAround(20, 10)
-            self.drawTilesAround(20, 11)
-            self.drawTilesAround(20, 12)
-            self.drawTilesAround(20, 13)
-            self.drawTilesAround(20, 14)
+        # Draw tiles around ghosts and pacman
+        for ghost in self.ghosts:
+            self.drawTilesAround(ghost.row, ghost.col)
+        self.drawTilesAround(self.pacman.row, self.pacman.col)
+        self.drawTilesAround(self.berryLocation[0], self.berryLocation[1])
+        # Clears Ready! Label
+        self.drawTilesAround(20, 10)
+        self.drawTilesAround(20, 11)
+        self.drawTilesAround(20, 12)
+        self.drawTilesAround(20, 13)
+        self.drawTilesAround(20, 14)
 
     def checkSurroundings(self):
         # Check if pacman got killed
@@ -497,7 +499,7 @@ class Game:
                     if len(imageName) == 1:
                         imageName = "00" + imageName
                     elif len(imageName) == 2:
-                         imageName = "0" + imageName
+                        imageName = "0" + imageName
                     # Get image of desired tile
                     imageName = "tile" + imageName + ".png"
                     tileImage = pygame.image.load(BoardPath + imageName)
@@ -729,7 +731,7 @@ class Ghost:
                 continue
             if ghost.row == cRow and ghost.col == cCol and not self.dead:
                 return False
-        if not ghostGate.count([cRow, cCol]) == 0:
+        if ghostGate.count([cRow, cCol]) != 0:
             if self.dead and self.row < cRow:
                 return True
             elif self.row > cRow and not self.dead and not self.attacked and not game.lockedIn:
@@ -742,39 +744,97 @@ class Ghost:
 
     def setDir(self): #Very inefficient || can easily refactor
         # BFS search -> Not best route but a route none the less
-        dirs = [[0, -self.ghostSpeed, 0],
-                [1, 0, self.ghostSpeed],
-                [2, self.ghostSpeed, 0],
-                [3, 0, -self.ghostSpeed]
+        dirs = [[0, -self.ghostSpeed, 0], # up
+                [1, 0, self.ghostSpeed], # right
+                [2, self.ghostSpeed, 0], # down
+                [3, 0, -self.ghostSpeed] # left
         ]
         random.shuffle(dirs)
-        best = 10000
+        best = 1000000
         bestDir = -1
         for newDir in dirs:
-            if self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]]) < best:
-                if not (self.lastLoc[0] == self.row + newDir[1] and self.lastLoc[1] == self.col + newDir[2]):
-                    if newDir[0] == 0 and self.col % 1.0 == 0:
+            if not (self.lastLoc[0] == self.row + newDir[1] and self.lastLoc[1] == self.col + newDir[2]):
+                nextDistance = self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]])
+                nextPossible = False
+                if nextDistance < best:
+                    if newDir[0] == 0 and self.col % 1.0 == 0: # up
                         if self.isValid(math.floor(self.row + newDir[1]), int(self.col + newDir[2])):
-                            bestDir = newDir[0]
-                            best = self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]])
-                    elif newDir[0] == 1 and self.row % 1.0 == 0:
+                            nextPossible = True
+                    elif newDir[0] == 1 and self.row % 1.0 == 0: # right
                         if self.isValid(int(self.row + newDir[1]), math.ceil(self.col + newDir[2])):
-                            bestDir = newDir[0]
-                            best = self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]])
-                    elif newDir[0] == 2 and self.col % 1.0 == 0:
+                            nextPossible = True
+                    elif newDir[0] == 2 and self.col % 1.0 == 0: # down
                         if self.isValid(math.ceil(self.row + newDir[1]), int(self.col + newDir[2])):
-                            bestDir = newDir[0]
-                            best = self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]])
-                    elif newDir[0] == 3 and self.row % 1.0 == 0:
+                            nextPossible = True
+                    elif newDir[0] == 3 and self.row % 1.0 == 0: # left
                         if self.isValid(int(self.row + newDir[1]), math.floor(self.col + newDir[2])):
-                            bestDir = newDir[0]
-                            best = self.calcDistance(self.target, [self.row + newDir[1], self.col + newDir[2]])
+                            nextPossible = True
+                if nextPossible:
+                    bestDir = newDir[0]
+                    best = nextDistance
         self.dir = bestDir
 
-    def calcDistance(self, a, b):
+    def heuristic(self, a, b): # returns the euclidean distance
         dR = a[0] - b[0]
         dC = a[1] - b[1]
         return math.sqrt((dR * dR) + (dC * dC))
+
+    def calcDistance(self, a, b):
+        # greedy best first search
+        dR = a[0] - b[0]
+        dC = a[1] - b[1]
+        # return math.sqrt((dR * dR) + (dC * dC))
+
+        # A*
+        targetList = a
+        ghostList = b
+        tx = int(targetList[0])
+        ty = int(targetList[1])
+
+        gx = int(ghostList[0])
+        gy = int(ghostList[1])
+
+        # gameBoard
+        # (tx, ty) -> (gx, gy)
+
+        gameBoard
+        heap = []
+        heapify(heap)
+
+        steps = 0
+
+        exp_cost = steps + self.heuristic([tx, ty], [gx, gy])
+        visited = set()
+
+        heappush(heap, (exp_cost, steps, gx, gy))
+
+        while (len(heap) != 0):
+            tope = heappop(heap)
+
+            curr_steps = steps
+            curr_gx = tope[2]
+            curr_gy = tope[3]
+            if (curr_gx, curr_gy) in visited: # list is not hashable, hence use tuple
+                continue
+
+            # check validity
+            valid = False
+            # check validity of curr_gx and curr_gy
+            # TODO
+            if not valid:
+                continue
+
+            visited.add((curr_gx, curr_gy))  # list is not hashable, hence use tuple
+
+            if ([curr_gx, curr_gy] == [tx, ty]):
+                return curr_steps
+
+            next_gx = curr_gx + 1
+            next_gy = curr_gx - 1
+            heur_cost = self.heuristic([next_gx, next_gy])
+            heappush(heap, (curr_steps + heur_cost + 1, steps + 1, next_gx, next_gy))
+
+        # DFS
 
     def setTarget(self):
         if gameBoard[int(self.row)][int(self.col)] == 4 and not self.dead:
@@ -836,13 +896,13 @@ class Ghost:
 
 
 
-    def setAttacked(self, isAttacked):
+    def setAttacked(self, isAttacked): # isAttacked is true when power pellet is consumed
         self.attacked = isAttacked
 
     def isAttacked(self):
         return self.attacked
 
-    def setDead(self, isDead):
+    def setDead(self, isDead): # isDead is true when power pellete is consumed and ghost is eaten
         self.dead = isDead
 
     def isDead(self):
@@ -854,9 +914,9 @@ ghostGate = [[15, 13], [15, 14]]
 
 
 def canMove(row, col):
-    if col == -1 or col == len(gameBoard[0]):
+    if col == -1 or col == len(gameBoard[0]): # if in  teleportation tunnel return true
         return True
-    if gameBoard[int(row)][int(col)] != 3:
+    if gameBoard[int(row)][int(col)] != 3: # if not wall then return true
         return True
     return False
 
@@ -923,9 +983,9 @@ def displayLaunchScreen():
     for i in range(len(characters)):
         for j in range(len(characters[i])):
             if j == 0:
-                    letter = pygame.image.load(TextPath + characters[i][j])
-                    letter = pygame.transform.scale(letter, (int(square * spriteRatio), int(square * spriteRatio)))
-                    screen.blit(letter, ((2 + j) * square - square//2, (12 + 2 * i) * square - square//3, square, square))
+                letter = pygame.image.load(TextPath + characters[i][j])
+                letter = pygame.transform.scale(letter, (int(square * spriteRatio), int(square * spriteRatio)))
+                screen.blit(letter, ((2 + j) * square - square//2, (12 + 2 * i) * square - square//3, square, square))
             else:
                 letter = pygame.image.load(TextPath + characters[i][j])
                 letter = pygame.transform.scale(letter, (int(square), int(square)))
@@ -968,9 +1028,9 @@ def pause(time):
 
 while running:
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT: # red cross pressed
             running = False
-            game.recordHighScore()
+            game.recordHighScore() # save the high score
         elif event.type == pygame.KEYDOWN:
             game.paused = False
             game.started = True
@@ -986,7 +1046,7 @@ while running:
             elif event.key == pygame.K_a:
                 if not onLaunchScreen:
                     game.pacman.newDir = 3
-            elif event.key == pygame.K_SPACE:
+            elif event.key == pygame.K_SPACE: # start of the game
                 if onLaunchScreen:
                     onLaunchScreen = False
                     game.paused = True
